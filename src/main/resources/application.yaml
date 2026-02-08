@@ -1,6 +1,6 @@
 spring:
   application:
-    name: spring-secuirity
+    name: spring-security
   datasource:
     url: jdbc:postgresql://localhost:5432/jwt_security
     username: postgres

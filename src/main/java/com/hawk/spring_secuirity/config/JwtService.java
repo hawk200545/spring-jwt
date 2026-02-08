@@ -7,6 +7,7 @@ import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.Date;
@@ -15,12 +16,12 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 
+@Service
 public class JwtService {
 
-    // Not recommended
     private final static String SECRET_KEY = "Fb9A+8X0znGv7rZNX9Rm/kHleB4AnDhcb+ckPgHFP2I=";
 
-    private String generateToken(UserDetails userDetails){
+    public String generateToken(UserDetails userDetails){
         return generateToken(new HashMap<>(),userDetails);
     }
 
@@ -38,7 +39,7 @@ public class JwtService {
                 .compact();
     }
 
-    private boolean isTokenValid(String token, @NonNull UserDetails userDetails){
+    public boolean isTokenValid(String token, @NonNull UserDetails userDetails){
         final String username = getUserEmail(token);
         return (username.equals(userDetails.getUsername())) && !isTokenExpired(token);
     }
