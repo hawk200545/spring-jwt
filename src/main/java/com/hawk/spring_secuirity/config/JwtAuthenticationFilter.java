@@ -1,5 +1,6 @@
 package com.hawk.spring_secuirity.config;
 
+import com.hawk.spring_secuirity.token.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,10 +21,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenService tokenService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService) {
+    public JwtAuthenticationFilter(JwtService jwtService, UserDetailsService userDetailsService, TokenService tokenService) {
         this.jwtService = jwtService;
         this.userDetailsService = userDetailsService;
+        this.tokenService = tokenService;
     }
 
     @Override
@@ -43,7 +46,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 userEmail = jwtService.getUserEmail(jwt);
                 if(userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null){
                     UserDetails userDetails = this.userDetailsService.loadUserByUsername(userEmail);
-                    if(jwtService.isTokenValid(jwt,userDetails)){
+                    if(jwtService.isTokenValid(jwt,userDetails) && tokenService.isValidToken(jwt)){
                         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                                 userDetails,
                                 null,

@@ -1,6 +1,9 @@
 package com.hawk.spring_secuirity.auth;
 
 import com.hawk.spring_secuirity.config.JwtService;
+import com.hawk.spring_secuirity.token.Token;
+import com.hawk.spring_secuirity.token.TokenRepository;
+import com.hawk.spring_secuirity.token.TokenType;
 import com.hawk.spring_secuirity.user.Role;
 import com.hawk.spring_secuirity.user.User;
 import com.hawk.spring_secuirity.user.UserRepository;
@@ -11,12 +14,15 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
 
     private final PasswordEncoder passwordEncoder;
     private final UserRepository repository;
+    private final TokenRepository tokenRepository;
     private final JwtService service;
     private final AuthenticationManager authenticationManager;
 
@@ -29,13 +35,37 @@ public class AuthenticationService {
                 .password(passwordEncoder.encode(registerRequest.getPassword()))
                 .role(Role.USER)
                 .build();
+        
+        var savedUser = repository.save(user);
+        var generatedToken = service.generateToken(user);
 
-        repository.save(user);
-
+        saveToken(generatedToken, savedUser);
         return AuthenticationResponse
                 .builder()
-                .token(service.generateToken(user))
+                .token(generatedToken)
                 .build();
+    }
+
+    private void saveToken(String generatedToken, User savedUser) {
+        var token = Token.
+                builder()
+                .token(generatedToken)
+                .type(TokenType.Bearer)
+                .expired(false)
+                .revoked(false)
+                .user(savedUser)
+                .build();
+        tokenRepository.save(token);
+    }
+
+    private void revokeAllUserTokens(User user){
+        List<Token> validUserTokens = tokenRepository.findAllValidTokenByUser(user.getId());
+        if(validUserTokens.isEmpty()) return;
+        validUserTokens.forEach(t->{
+            t.setExpired(true);
+            t.setRevoked(true);
+        });
+        tokenRepository.saveAll(validUserTokens);
     }
 
     public AuthenticationResponse authenticate(@NonNull AuthenticationRequest authenticationRequest){
@@ -47,9 +77,12 @@ public class AuthenticationService {
         );
         var user = repository.findByEmail(authenticationRequest.getEmail())
                 .orElseThrow();
+        var generatedToken = service.generateToken(user);
+        revokeAllUserTokens(user);
+        saveToken(generatedToken,user);
         return AuthenticationResponse
                 .builder()
-                .token(service.generateToken(user))
+                .token(generatedToken)
                 .build();
     }
 }
